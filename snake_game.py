@@ -27,7 +27,7 @@ BLUE2 = (0, 100, 255)
 BLACK = (0, 0, 0)
 
 BLOCK_SIZE = 20
-SPEED = 20
+SPEED = 40
 
 
 class SnakeGame:
@@ -38,8 +38,8 @@ class SnakeGame:
         self.h = h
 
         # grid dimensions
-        self.grid_w = self.w // BLOCK_SIZE
-        self.grid_h = self.h // BLOCK_SIZE
+        self.grid_w = int(self.w // BLOCK_SIZE)
+        self.grid_h = int(self.h // BLOCK_SIZE)
 
         # state matrix
         self.state_matrix = np.zeros((self.grid_h, self.grid_w), dtype=int)
@@ -48,8 +48,11 @@ class SnakeGame:
         self.display = pygame.display.set_mode((self.w, self.h))
         pygame.display.set_caption('Snake')
         self.clock = pygame.time.Clock()
+        self.reset()
 
+    def reset(self):
         # init game state
+        self.state_matrix = np.zeros((self.grid_h, self.grid_w), dtype=int)
         self.direction = Direction.RIGHT
 
         self.head = Point(self.w / 2, self.h / 2)
@@ -81,12 +84,12 @@ class SnakeGame:
         self.state_matrix[food_y][food_x] = 1
         # place snake body pieces into the matrix
         for point in self.snake[1:]:
-            snake_y = point.y // BLOCK_SIZE
-            snake_x = point.x // BLOCK_SIZE
+            snake_y = int(point.y // BLOCK_SIZE)
+            snake_x = int(point.x // BLOCK_SIZE)
             self.state_matrix[snake_y][snake_x] = 2
         # place snake head into matrix:
-        head_y = self.snake[0].y // BLOCK_SIZE
-        head_x = self.snake[0].x // BLOCK_SIZE
+        head_y = int(self.snake[0].y // BLOCK_SIZE)
+        head_x = int(self.snake[0].x // BLOCK_SIZE)
         self.state_matrix[head_y][head_x] = 3
 
     def play_step(self):
@@ -95,15 +98,6 @@ class SnakeGame:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_a:
-                    self.direction = Direction.LEFT
-                elif event.key == pygame.K_d:
-                    self.direction = Direction.RIGHT
-                elif event.key == pygame.K_w:
-                    self.direction = Direction.UP
-                elif event.key == pygame.K_s:
-                    self.direction = Direction.DOWN
 
         # 2. move
         self._move(self.direction)  # update the head
@@ -166,17 +160,3 @@ class SnakeGame:
         self.head = Point(x, y)
         self.update_state_matrix()
 
-
-if __name__ == '__main__':
-    game = SnakeGame()
-
-    # game loop
-    while True:
-        game_over, score = game.play_step()
-
-        if game_over == True:
-            break
-
-    print('Final Score', score)
-
-    pygame.quit()

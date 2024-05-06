@@ -1,15 +1,17 @@
-import gym
+import gymnasium as gym
 import numpy as np
 import pygame
 from enum import Enum
-from gym import spaces
+from gymnasium import spaces
 from snake_game import SnakeGame
+
 
 class Direction(Enum):
     RIGHT = 1
     LEFT = 2
     UP = 3
     DOWN = 4
+
 
 class SnakeEnv(gym.Env):
     """Custom Environment that follows gym interface"""
@@ -19,7 +21,7 @@ class SnakeEnv(gym.Env):
         self.game = SnakeGame()
         self.action_space = spaces.Discrete(4)
         self.observation_space = spaces.Box(low=0, high=3,
-                                            shape=(self.game.grid_h, self.game.grid_w), dtype=np.int)
+                                            shape=(768,), dtype=int)
 
     def step(self, action):
         # mapping action space to controller
@@ -31,19 +33,21 @@ class SnakeEnv(gym.Env):
 
         # update observation
         self.game.update_state_matrix()
+        self.render()
 
         # prepare return values
         observation = self.game.state_matrix
         reward = score
         done = game_over
+        timeout = False
         info = {}
 
-        return observation, reward, done, info
+        return observation.flatten(), reward, done, timeout, info
 
-    def reset(self):
-        self.game.__init__()
-        self.game.update_state_matrix()
-        return self.game.state_matrix  # reward, done, info can't be included
+    def reset(self, seed=None):
+        info = {}
+        self.game.reset()
+        return self.game.state_matrix.flatten(), info  # reward, done, info can't be included
 
     def render(self, mode='human'):
         if mode == 'human':
