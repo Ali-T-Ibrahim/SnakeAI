@@ -10,7 +10,7 @@ MAX_LEN_GOAL = 5
 
 
 def collision_with_apple(apple_position, score):
-    apple_position = [random.randrange(1, 26) * 10, random.randrange(1, 26) * 10]
+    apple_position = [random.randrange(1, 25) * 10, random.randrange(1, 25) * 10]
     score += 1
     return apple_position, score
 
@@ -30,6 +30,85 @@ def collision_with_self(snake_position):
         return 0
 
 
+def get_relative_positions(snake_head, snake_position, apple_position):
+    # Apple x and y positions relative to head [-1: left, 0: level, 1: right]
+    if apple_position[0] < snake_head[0]:  # apple to the left of head
+        apple_x = -1
+    elif apple_position[0] > snake_head[0]:  # apple to the right of head
+        apple_x = 1
+    else:
+        apple_x = 0  # apple on same row as head
+
+    if apple_position[1] < snake_head[1]:  # apple is above head
+        apple_y = -1
+    elif apple_position[1] > snake_head[1]:  # apple is below head
+        apple_y = 1
+    else:
+        apple_y = 0  # apple is on same column as head
+
+    # tail and midsection relative to head [-1: left, 0: level, 1: right]
+    # tail
+    tail = snake_position[-1]
+    middle = snake_position[len(snake_position) // 2]
+
+    if tail[0] < snake_head[0]:  # tail to the left of head
+        tail_x = -1
+    elif tail[0] > snake_head[0]:  # tail to the right of head
+        tail_x = 1
+    else:
+        tail_x = 0  # tail on same row as head
+
+    if tail[1] < snake_head[1]:  # tail is above head
+        tail_y = -1
+    elif tail[1] > snake_head[1]:  # tail is below head
+        tail_y = 1
+    else:
+        tail_y = 0  # tail is on same column as head
+
+    # middle
+    if middle[0] < snake_head[0]:  # middle to the left of head
+        middle_x = -1
+    elif middle[0] > snake_head[0]:  # middle to the right of head
+        middle_x = 1
+    else:
+        middle_x = 0  # middle on same row as head
+
+    if middle[1] < snake_head[1]:  # middle is above head
+        middle_y = -1
+    elif middle[1] > snake_head[1]:  # middle is below head
+        middle_y = 1
+    else:
+        middle_y = 0  # middle is on same column as head
+
+    return [apple_x, apple_y, middle_x, middle_y, tail_x, tail_y]
+
+
+def scan_danger(snake_position, snake_head):
+    danger_dir = {
+        "up": np.array([0, -10]),
+        "down": np.array([0, 10]),
+        "left": np.array([-10, 0]),
+        "right": np.array([10, 0]),
+    }
+
+    danger = {"up": 0, "down": 0, "left": 0, "right": 0}
+
+    for direction in danger_dir:
+        for i in range(-1, 5):
+            level = i + 2
+            head = np.array(snake_head)
+            scanning = list((level * danger_dir[direction]) + snake_head)
+            if (scanning in list(snake_position) or (scanning[0] == -10) or (scanning[1] == -10)
+                or (scanning[0] == 260) or (scanning[1] == 260)):
+                danger[direction] = i
+                break
+            else:
+                danger[direction] = 4
+
+    return list(danger.values())
+
+
+
 class SnakeEnv3(gym.Env):
     """Custom Environment that follows gym interface"""
 
@@ -41,15 +120,15 @@ class SnakeEnv3(gym.Env):
         self.action_space = spaces.Discrete(4)
         # Example for using image as input (channel-first; channel-last also works):
         self.observation_space = spaces.Box(low=-500, high=500,
-                                            shape=(MAX_LEN_GOAL + 5,), dtype=np.int32)
+                                            shape=(10,), dtype=np.int32)
 
     def step(self, action):
         self.frame += 1
 
-        initial_penalty = -50
-        scale = 1
-        penalty = initial_penalty + scale * np.log1p(self.frame)
-        penalty = min(penalty, -5)
+        # initial_penalty = -50
+        # scale = 1
+        # penalty = initial_penalty + scale * np.log1p(self.frame)
+        # penalty = min(penalty, -5)
 
         cv2.imshow('a', self.img)
         cv2.waitKey(1)
@@ -103,30 +182,21 @@ class SnakeEnv3(gym.Env):
             cv2.putText(self.img, 'Your Score is {}'.format(self.score), (140, 250), font, 1, (255, 255, 255), 2,
                         cv2.LINE_AA)
             cv2.imshow('a', self.img)
-            death_penalty = penalty
-
+            death_penalty = -10
+            print(self.score)
             self.done = True
 
         distance = np.linalg.norm(np.array(self.snake_head) - np.array(self.apple_position))
+        movement_penalty = -0.00001 * self.frame
+        self.reward = ((128 - distance) / 100) + apple_reward + death_penalty + movement_penalty
 
-        self.reward = ((128 - distance) / 100) + apple_reward + death_penalty
 
         # observation
-        # head_y, head_x, apple_y, apple_x, snake_len, prev_moves
+        rel_positions = get_relative_positions(self.snake_head, self.snake_position, self.apple_position)
+        danger = scan_danger(self.snake_position, self.snake_head)
 
-        head_y = self.snake_head[0]
-        head_x = self.snake_head[1]
-        apple_y = self.apple_position[0]
-        apple_x = self.apple_position[1]
-        snake_len = self.score + 3
-
-        self.prev_actions = deque(maxlen=MAX_LEN_GOAL)
-        for _ in range(MAX_LEN_GOAL):
-            self.prev_actions.append(-1)
-
-        self.observation = [head_y, head_x, apple_y, apple_x, snake_len] + list(self.prev_actions)
+        self.observation = rel_positions + danger
         self.observation = np.array(self.observation)
-
         info = {}
         truncated = False
 
@@ -148,10 +218,11 @@ class SnakeEnv3(gym.Env):
         }
 
         # choose start position
-        pos_selection = random.choice([0, 1, 2, 3])
+        # pos_selection = random.choice([0, 1, 2, 3])
+        pos_selection = 1  # right only for now
         self.snake_position = start_position[pos_selection]
 
-        self.apple_position = [random.randrange(1, 26) * 10, random.randrange(1, 26) * 10]
+        self.apple_position = [random.randrange(1, 25) * 10, random.randrange(1, 25) * 10]
         self.score = 0
         self.reward = 0
         self.prev_button_direction = pos_selection
@@ -159,20 +230,11 @@ class SnakeEnv3(gym.Env):
         self.snake_head = [130, 130]
 
         # observation
-        # head_y, head_x, apple_y, apple_x, snake_len, prev_moves
+        rel_positions = get_relative_positions(self.snake_head, self.snake_position, self.apple_position)
+        danger = scan_danger(self.snake_position, self.snake_head)
 
-        head_y = self.snake_head[0]
-        head_x = self.snake_head[1]
-        apple_y = self.apple_position[0]
-        apple_x = self.apple_position[1]
-        snake_len = self.score + 3
-
-        self.prev_actions = deque(maxlen=MAX_LEN_GOAL)
-        for _ in range(MAX_LEN_GOAL):
-            self.prev_actions.append(-1)
-
-        self.observation = [head_y, head_x, apple_y, apple_x, snake_len] + list(self.prev_actions)
+        self.observation = rel_positions + danger
         self.observation = np.array(self.observation)
 
         info = {}
-        return self.observation, info  # reward, done, info can't be included
+        return self.observation # reward, done, info can't be included
