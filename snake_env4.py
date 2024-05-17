@@ -111,11 +111,11 @@ def scan_danger(snake_position, snake_head):
 
 
 
-class SnakeEnv3(gym.Env):
+class SnakeEnv4(gym.Env):
     """Custom Environment that follows gym interface"""
 
     def __init__(self):
-        super(SnakeEnv3, self).__init__()
+        super(SnakeEnv4, self).__init__()
         # Define action and observation space
         # They must be gym.spaces objects
         # Example when using discrete actions:
@@ -184,24 +184,11 @@ class SnakeEnv3(gym.Env):
             cv2.putText(self.img, 'Your Score is {}'.format(self.score), (140, 250), font, 1, (255, 255, 255), 2,
                         cv2.LINE_AA)
             cv2.imshow('a', self.img)
-            if self.score > 10:
-                death_penalty = -100
-            if self.score > 20:
-                death_penalty = -200
-            if self.score > 30:
-                death_penalty = -300
-            if self.score > 40:
-                death_penalty = -400
             if self.score > 50:
-                death_penalty = -1000
-            if self.score > 60:
-                death_penalty = -1500
-            if self.score > 70:
-                death_penalty = -2000
-            if self.score > 80:
-                death_penalty = -5000
+                death_penalty = -500
             else:
                 death_penalty = -50
+            #print(f"SCORE: {self.score}")
             self.done = True
 
         distance = np.linalg.norm(np.array(self.snake_head) - np.array(self.apple_position))

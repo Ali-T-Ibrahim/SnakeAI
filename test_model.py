@@ -4,8 +4,8 @@ import os
 from snake_env3 import SnakeEnv3
 import time
 
-model_code = 1715369437
-step = 5840000
+model_code = 1715634279
+step = 21460000
 
 models_dir = f"models/{model_code}"
 model_path = f"{models_dir}/{step}.zip"
@@ -13,7 +13,7 @@ model_path = f"{models_dir}/{step}.zip"
 env = SnakeEnv3()
 env.reset()
 
-model = PPO.load(model_path, env=env)
+model = PPO.load(model_path, env=env, tensorboard_log=models_dir)
 
 episodes = 50
 

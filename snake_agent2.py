@@ -1,7 +1,7 @@
 from stable_baselines3 import PPO
 from stable_baselines3.common.logger import configure
 import os
-from snake_env3 import SnakeEnv3
+from snake_env4 import SnakeEnv4
 import time
 
 models_dir = f"models/{int(time.time())}/"
@@ -13,7 +13,7 @@ if not os.path.exists(models_dir):
 if not os.path.exists(logdir):
     os.makedirs(logdir)
 
-env = SnakeEnv3()
+env = SnakeEnv4()
 env.reset()
 
 model = PPO('MlpPolicy', env, verbose=2, tensorboard_log=logdir)
